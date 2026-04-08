@@ -1,507 +1,729 @@
-// scripts/script.js
-(() => {
-    'use strict';
+"use strict";
 
-    /**
-     * Stato globale dell'applicazione
-     */
-    const state = {
-        event: {
-            name: '',
-            date: '',
-            time: '',
-            category: 'client_meeting',
-            budget: 7500,
-            maxParticipants: 40,
-            extras: [] // ['catering', 'music', ...]
-        },
-        guests: [], // { id, name, rsvp }
-        nextGuestId: 1
-    };
+/* ============================
+   VARIABILI DI STATO GLOBALI
+   ============================ */
 
-    const RSVP_STATES = ['confirmed', 'canceled', 'pending'];
-    const RSVP_LABELS = {
-        confirmed: 'Confermato',
-        canceled: 'Annullato',
-        pending: 'In attesa'
-    };
+// stato evento
+let eventName = "";
+let eventDate = "";
+let eventTime = "";
+let eventCategory = "client_meeting";
+let eventBudget = 7500;
+let eventMaxParticipants = 40;
+let eventExtras = []; // array di stringhe
 
-    let currencyFormatter;
+// stato invitati (array paralleli)
+let guestIds = [];
+let guestNames = [];
+let guestRsvps = [];
+let nextGuestId = 1;
+
+// costanti RSVP e label
+const RSVP_STATES = ["confirmed", "canceled", "pending"];
+const RSVP_LABELS = ["Confermato", "Annullato", "In attesa"];
+
+// formatter budget (opzionale)
+let currencyFormatter = null;
+
+/* ============================
+   FUNZIONI DI INIZIALIZZAZIONE
+   ============================ */
+
+function initIntl() {
     try {
-        currencyFormatter = new Intl.NumberFormat('it-IT', {
-            style: 'currency',
-            currency: 'EUR',
+        currencyFormatter = new Intl.NumberFormat("it-IT", {
+            style: "currency",
+            currency: "EUR",
             maximumFractionDigits: 0
         });
-    } catch {
+    } catch (error) {
         currencyFormatter = null;
     }
+}
 
-    /**
-     * Utility: formatta il budget come testo leggibile
-     */
-    function formatBudget(value) {
-        const num = Number(value) || 0;
-        if (currencyFormatter) {
-            return currencyFormatter.format(num);
-        }
-        return `${num.toLocaleString('it-IT')} EUR`;
+function hydrateStateFromDOM() {
+    let guestListElement = document.querySelector("#guest-list");
+    let cards;
+    let i;
+    let maxId = 0;
+
+    if (!guestListElement) {
+        return;
     }
 
-    /**
-     * Inizializza lo stato a partire dal DOM (mock statico già presente)
-     */
-    function hydrateStateFromDOM() {
-        const guestList = document.querySelector('#guest-list');
-        if (!guestList) return;
+    cards = guestListElement.querySelectorAll(".ep-guest-card");
 
-        const cards = guestList.querySelectorAll('.ep-guest-card');
-        let maxId = 0;
+    // leggo gli invitati presenti già nell'HTML
+    i = 0;
+    while (i < cards.length) {
+        let card = cards[i];
+        let idAttr = card.getAttribute("data-guest-id");
+        let nameElement = card.querySelector(".ep-guest-card__name");
+        let rsvpAttr = card.getAttribute("data-rsvp-status");
+        let idNumber;
+        let nameText;
+        let rsvpValue;
 
-        cards.forEach((card) => {
-            const idAttr = card.dataset.guestId;
-            const nameEl = card.querySelector('.ep-guest-card__name');
-            const rawStatus = card.dataset.rsvpStatus || 'pending';
-
-            const id = idAttr ? Number(idAttr) : NaN;
-            if (!nameEl) return;
-
-            const guest = {
-                id: Number.isFinite(id) ? id : undefined,
-                name: nameEl.textContent.trim(),
-                rsvp: RSVP_STATES.includes(rawStatus) ? rawStatus : 'pending'
-            };
-
-            state.guests.push(guest);
-            if (Number.isFinite(id) && id > maxId) maxId = id;
-        });
-
-        state.nextGuestId = maxId + 1;
-
-        // Imposta budget iniziale dallo slider, se presente
-        const budgetInput = document.querySelector('#event-budget');
-        if (budgetInput) {
-            state.event.budget = Number(budgetInput.value) || state.event.budget;
+        if (!nameElement) {
+            i++;
+            continue;
         }
 
-        // Imposta maxParticipants iniziale
-        const maxInput = document.querySelector('#event-max-participants');
-        if (maxInput) {
-            state.event.maxParticipants = Number(maxInput.value) || state.event.maxParticipants;
+        idNumber = Number(idAttr);
+        nameText = nameElement.textContent.trim();
+        rsvpValue = rsvpAttr ? rsvpAttr : "pending";
+
+        if (!isValidRsvp(rsvpValue)) {
+            rsvpValue = "pending";
         }
 
-        // Aggiorna subito riepilogo su base stato
-        renderEventSummary();
-        renderConfirmedGuests();
-        renderRsvpSummary();
+        guestIds.push(idNumber);
+        guestNames.push(nameText);
+        guestRsvps.push(rsvpValue);
+
+        if (!isNaN(idNumber) && idNumber > maxId) {
+            maxId = idNumber;
+        }
+
+        i++;
     }
 
-    /**
-     * Associa tutti gli event listener principali
-     */
-    function bindEventListeners() {
-        const eventForm = document.querySelector('#event-form');
-        const guestForm = document.querySelector('#guest-form');
-        const guestList = document.querySelector('#guest-list');
-        const budgetInput = document.querySelector('#event-budget');
-        const categoryRadios = document.querySelectorAll(
-            '#event-category-group .ep-radio-input'
-        );
+    nextGuestId = maxId + 1;
 
-        if (eventForm) {
-            eventForm.addEventListener('submit', handleEventFormSubmit);
+    // budget iniziale
+    let budgetInput = document.querySelector("#event-budget");
+    if (budgetInput) {
+        eventBudget = Number(budgetInput.value) || eventBudget;
+        updateBudgetLabel(budgetInput.value);
+    }
+
+    // max partecipanti iniziale
+    let maxInput = document.querySelector("#event-max-participants");
+    if (maxInput) {
+        eventMaxParticipants = Number(maxInput.value) || eventMaxParticipants;
+    }
+
+    // render iniziali
+    renderEventSummary();
+    renderConfirmedGuests();
+    renderRsvpSummary();
+}
+
+function bindEventListeners() {
+    let eventForm = document.querySelector("#event-form");
+    let guestForm = document.querySelector("#guest-form");
+    let guestListElement = document.querySelector("#guest-list");
+    let budgetInput = document.querySelector("#event-budget");
+    let categoryRadios = document.querySelectorAll("#event-category-group .ep-radio-input");
+    let i;
+
+    if (eventForm) {
+        eventForm.addEventListener("submit", handleEventFormSubmit);
+    }
+
+    if (guestForm) {
+        guestForm.addEventListener("submit", handleGuestFormSubmit);
+    }
+
+    if (guestListElement) {
+        guestListElement.addEventListener("click", handleGuestListClick);
+    }
+
+    if (budgetInput) {
+        budgetInput.addEventListener("input", handleBudgetInput);
+    }
+
+    i = 0;
+    while (i < categoryRadios.length) {
+        let radio = categoryRadios[i];
+        radio.addEventListener("change", handleCategoryChange);
+        i++;
+    }
+}
+
+/* ============================
+   HANDLER FORM EVENTO
+   ============================ */
+
+function handleEventFormSubmit(event) {
+    let form = event.target;
+    let nameInput;
+    let dateInput;
+    let timeInput;
+    let maxInput;
+    let budgetInput;
+    let checkedCategory;
+    let extrasInputs;
+    let extrasTmp = [];
+    let i;
+
+    event.preventDefault();
+
+    nameInput = form.querySelector("#event-name");
+    dateInput = form.querySelector("#event-date");
+    timeInput = form.querySelector("#event-time");
+    maxInput = form.querySelector("#event-max-participants");
+    budgetInput = form.querySelector("#event-budget");
+    checkedCategory = form.querySelector('input[name="eventCategory"]:checked');
+    extrasInputs = form.querySelectorAll('input[name="extraServices"]');
+
+    if (nameInput) {
+        eventName = nameInput.value.trim();
+    }
+
+    if (dateInput) {
+        eventDate = dateInput.value;
+    }
+
+    if (timeInput) {
+        eventTime = timeInput.value;
+    }
+
+    if (maxInput) {
+        eventMaxParticipants = Number(maxInput.value) || 0;
+    }
+
+    if (budgetInput) {
+        eventBudget = Number(budgetInput.value) || 0;
+        updateBudgetLabel(budgetInput.value);
+    }
+
+    if (checkedCategory) {
+        eventCategory = checkedCategory.value;
+    }
+
+    i = 0;
+    while (i < extrasInputs.length) {
+        let input = extrasInputs[i];
+        if (input.checked && input.value) {
+            extrasTmp.push(input.value);
         }
+        i++;
+    }
+    eventExtras = extrasTmp;
 
-        if (guestForm) {
-            guestForm.addEventListener('submit', handleGuestFormSubmit);
+    renderEventSummary();
+}
+
+/* ============================
+   HANDLER FORM INVITATO
+   ============================ */
+
+function handleGuestFormSubmit(event) {
+    let form = event.target;
+    let nameInput;
+    let rsvpSelect;
+    let name;
+    let rsvp;
+    let id;
+
+    event.preventDefault();
+
+    nameInput = form.querySelector("#guest-name");
+    rsvpSelect = form.querySelector("#guest-rsvp");
+
+    if (!nameInput) {
+        return;
+    }
+
+    name = nameInput.value.trim();
+    if (!name) {
+        nameInput.focus();
+        return;
+    }
+
+    if (rsvpSelect) {
+        rsvp = rsvpSelect.value;
+    } else {
+        rsvp = "pending";
+    }
+
+    if (!isValidRsvp(rsvp)) {
+        rsvp = "pending";
+    }
+
+    id = nextGuestId;
+    nextGuestId++;
+
+    guestIds.push(id);
+    guestNames.push(name);
+    guestRsvps.push(rsvp);
+
+    appendGuestCard(id, name, rsvp);
+    renderConfirmedGuests();
+    renderRsvpSummary();
+
+    form.reset();
+    if (rsvpSelect) {
+        rsvpSelect.value = "confirmed";
+    }
+}
+
+/* ============================
+   HANDLER LISTA INVITATI
+   ============================ */
+
+function handleGuestListClick(event) {
+    let rootList = document.querySelector("#guest-list");
+    let target = event.target;
+    let button = null;
+    let card = null;
+    let action;
+    let guestId;
+    let index;
+
+    if (!rootList) {
+        return;
+    }
+
+    // cerco il button[data-action] risalendo il DOM con while
+    while (target && target !== rootList) {
+        if (target.matches && target.matches("button[data-action]")) {
+            button = target;
+            break;
         }
+        target = target.parentNode;
+    }
 
-        if (guestList) {
-            // Delegation per pulsanti RSVP / delete
-            guestList.addEventListener('click', handleGuestListClick);
+    if (!button) {
+        return;
+    }
+
+    action = button.getAttribute("data-action");
+
+    // cerco la card ep-guest-card partendo dal button
+    card = button;
+    while (card && !card.classList.contains("ep-guest-card")) {
+        card = card.parentNode;
+    }
+
+    if (!card) {
+        return;
+    }
+
+    guestId = Number(card.getAttribute("data-guest-id"));
+    if (isNaN(guestId)) {
+        return;
+    }
+
+    index = findGuestIndexById(guestId);
+    if (index === -1) {
+        return;
+    }
+
+    if (action === "toggle-rsvp") {
+        toggleGuestRsvp(index, card);
+    } else if (action === "delete-guest") {
+        deleteGuest(index, card);
+    }
+}
+
+/* ============================
+   HANDLER BUDGET E CATEGORIA
+   ============================ */
+
+function handleBudgetInput(event) {
+    let input = event.target;
+    if (!input) {
+        return;
+    }
+    updateBudgetLabel(input.value);
+}
+
+function handleCategoryChange(event) {
+    let input = event.target;
+    let group = document.querySelector("#event-category-group");
+    let labels;
+    let i;
+    let label;
+
+    if (!group || !input) {
+        return;
+    }
+
+    labels = group.querySelectorAll(".ep-segmented-control__item");
+
+    i = 0;
+    while (i < labels.length) {
+        labels[i].classList.remove("ep-segmented-control__item--active");
+        i++;
+    }
+
+    label = group.querySelector('label[for="' + input.id + '"]');
+    if (label) {
+        label.classList.add("ep-segmented-control__item--active");
+    }
+
+    eventCategory = input.value;
+}
+
+/* ============================
+   FUNZIONI UTILI
+   ============================ */
+
+function isValidRsvp(rsvp) {
+    let i = 0;
+    while (i < RSVP_STATES.length) {
+        if (RSVP_STATES[i] === rsvp) {
+            return true;
         }
+        i++;
+    }
+    return false;
+}
 
-        if (budgetInput) {
-            budgetInput.addEventListener('input', handleBudgetInput);
+function formatBudget(value) {
+    let number = Number(value);
+
+    if (isNaN(number)) {
+        number = 0;
+    }
+
+    if (currencyFormatter) {
+        return currencyFormatter.format(number);
+    }
+
+    return number.toLocaleString("it-IT") + " EUR";
+}
+
+function updateBudgetLabel(value) {
+    let output = document.querySelector("#event-budget-output");
+    if (!output) {
+        return;
+    }
+    output.textContent = formatBudget(value);
+}
+
+function findGuestIndexById(id) {
+    let i = 0;
+    while (i < guestIds.length) {
+        if (guestIds[i] === id) {
+            return i;
         }
+        i++;
+    }
+    return -1;
+}
 
-        if (categoryRadios.length) {
-            categoryRadios.forEach((radio) => {
-                radio.addEventListener('change', handleCategoryChange);
-            });
+function getRsvpClass(rsvp) {
+    if (rsvp === "confirmed") {
+        return "ep-guest-card--confirmed";
+    }
+    if (rsvp === "canceled") {
+        return "ep-guest-card--canceled";
+    }
+    return "ep-guest-card--pending";
+}
+
+function getRsvpLabel(rsvp) {
+    let i = 0;
+    while (i < RSVP_STATES.length) {
+        if (RSVP_STATES[i] === rsvp) {
+            return RSVP_LABELS[i];
+        }
+        i++;
+    }
+    return "";
+}
+
+function getCategoryLabel(category) {
+    if (category === "client_meeting") {
+        return "Client Meeting";
+    }
+    if (category === "training") {
+        return "Training";
+    }
+    if (category === "internal_offsite") {
+        return "Internal Offsite";
+    }
+    return category;
+}
+
+function getExtraLabel(extra) {
+    if (extra === "catering") {
+        return "Catering";
+    }
+    if (extra === "photographer") {
+        return "Fotografo";
+    }
+    if (extra === "music") {
+        return "Musica";
+    }
+    if (extra === "decorations") {
+        return "Decorazioni";
+    }
+    return extra;
+}
+
+/* ============================
+   RENDERING DOM
+   ============================ */
+
+function appendGuestCard(id, name, rsvp) {
+    let guestListElement = document.querySelector("#guest-list");
+    let card;
+    let statusClass;
+    let nameElement;
+    let badgeElement;
+
+    if (!guestListElement) {
+        return;
+    }
+
+    statusClass = getRsvpClass(rsvp);
+
+    card = document.createElement("article");
+    card.className = "ep-guest-card " + statusClass;
+    card.setAttribute("data-guest-id", String(id));
+    card.setAttribute("data-rsvp-status", rsvp);
+
+    card.innerHTML =
+        '<div class="ep-guest-card__header">' +
+        '<span class="ep-guest-card__name"></span>' +
+        '<span class="ep-guest-card__status-badge"></span>' +
+        '</div>' +
+        '<div class="ep-guest-card__meta">' +
+        '<span class="ep-guest-card__role">Ruolo da definire</span>' +
+        '<div class="btn-group btn-group-sm">' +
+        '<button type="button" class="btn btn-outline-secondary ep-btn-ghost" data-action="toggle-rsvp">Cambia RSVP</button>' +
+        '<button type="button" class="btn btn-outline-danger ep-btn-ghost" data-action="delete-guest">Rimuovi</button>' +
+        '</div>' +
+        '</div>';
+
+    nameElement = card.querySelector(".ep-guest-card__name");
+    badgeElement = card.querySelector(".ep-guest-card__status-badge");
+
+    if (nameElement) {
+        nameElement.textContent = name;
+    }
+    if (badgeElement) {
+        badgeElement.textContent = getRsvpLabel(rsvp);
+    }
+
+    guestListElement.appendChild(card);
+}
+
+function toggleGuestRsvp(index, cardElement) {
+    let currentRsvp = guestRsvps[index];
+    let newRsvp;
+    let position;
+    let i;
+    let badgeElement;
+
+    position = 0;
+    while (position < RSVP_STATES.length) {
+        if (RSVP_STATES[position] === currentRsvp) {
+            break;
+        }
+        position++;
+    }
+
+    if (position === RSVP_STATES.length) {
+        position = 0;
+    } else {
+        position = (position + 1) % RSVP_STATES.length;
+    }
+
+    newRsvp = RSVP_STATES[position];
+    guestRsvps[index] = newRsvp;
+
+    cardElement.setAttribute("data-rsvp-status", newRsvp);
+    cardElement.classList.remove(
+        "ep-guest-card--confirmed",
+        "ep-guest-card--canceled",
+        "ep-guest-card--pending"
+    );
+    cardElement.classList.add(getRsvpClass(newRsvp));
+
+    badgeElement = cardElement.querySelector(".ep-guest-card__status-badge");
+    if (badgeElement) {
+        badgeElement.textContent = getRsvpLabel(newRsvp);
+    }
+
+    renderConfirmedGuests();
+    renderRsvpSummary();
+}
+
+function deleteGuest(index, cardElement) {
+    guestIds.splice(index, 1);
+    guestNames.splice(index, 1);
+    guestRsvps.splice(index, 1);
+
+    cardElement.remove();
+
+    renderConfirmedGuests();
+    renderRsvpSummary();
+}
+
+function renderEventSummary() {
+    let list = document.querySelector(".ep-invite-summary__list");
+    let items;
+    let extrasText = "";
+    let i;
+
+    if (!list) {
+        return;
+    }
+
+    items = list.querySelectorAll("li");
+
+    // Nome
+    if (items[0]) {
+        if (eventName) {
+            items[0].innerHTML = "<strong>Nome:</strong> " + escapeHtml(eventName);
+        } else {
+            items[0].innerHTML =
+                "<strong>Nome:</strong> Quarterly Business Review Q3 · Client XYZ";
         }
     }
 
-    /**
-     * Gestisce submit del form evento
-     */
-    function handleEventFormSubmit(event) {
-        event.preventDefault();
-
-        const form = event.target;
-        const nameInput = form.querySelector('#event-name');
-        const dateInput = form.querySelector('#event-date');
-        const timeInput = form.querySelector('#event-time');
-        const maxInput = form.querySelector('#event-max-participants');
-        const budgetInput = form.querySelector('#event-budget');
-        const categoryRadioChecked = form.querySelector(
-            'input[name="eventCategory"]:checked'
-        );
-        const extrasInputs = form.querySelectorAll('input[name="extraServices"]');
-
-        state.event.name = nameInput?.value.trim() || '';
-        state.event.date = dateInput?.value || '';
-        state.event.time = timeInput?.value || '';
-        state.event.maxParticipants = maxInput?.value
-            ? Number(maxInput.value)
-            : state.event.maxParticipants;
-        state.event.budget = budgetInput?.value
-            ? Number(budgetInput.value)
-            : state.event.budget;
-        state.event.category = categoryRadioChecked?.value || state.event.category;
-
-        const extras = [];
-        extrasInputs.forEach((input) => {
-            if (input.checked && input.value) extras.push(input.value);
-        });
-        state.event.extras = extras;
-
-        renderEventSummary();
+    // Data + ora
+    if (items[1]) {
+        let dateLabel = eventDate || "Data da definire";
+        let timeLabel = eventTime || "--:--";
+        items[1].innerHTML =
+            "<strong>Data:</strong> " +
+            escapeHtml(dateLabel) +
+            " · <strong>Ora:</strong> " +
+            escapeHtml(timeLabel);
     }
 
-    /**
-     * Gestisce il submit del form invitato
-     */
-    function handleGuestFormSubmit(event) {
-        event.preventDefault();
-
-        const form = event.target;
-        const nameInput = form.querySelector('#guest-name');
-        const rsvpSelect = form.querySelector('#guest-rsvp');
-
-        const name = nameInput?.value.trim();
-        const rsvp = rsvpSelect?.value || 'pending';
-
-        if (!name) {
-            // Fallback semplice: in produzione potresti usare validazione custom
-            nameInput?.focus();
-            return;
-        }
-
-        const guest = {
-            id: state.nextGuestId++,
-            name,
-            rsvp: RSVP_STATES.includes(rsvp) ? rsvp : 'pending'
-        };
-
-        state.guests.push(guest);
-        appendGuestCard(guest);
-        renderConfirmedGuests();
-        renderRsvpSummary();
-
-        form.reset();
-        if (rsvpSelect) {
-            rsvpSelect.value = 'confirmed';
-        }
+    // Categoria
+    if (items[2]) {
+        items[2].innerHTML =
+            "<strong>Categoria:</strong> " + escapeHtml(getCategoryLabel(eventCategory));
     }
 
-    /**
-     * Gestisce click nella lista invitati (delegation)
-     */
-    function handleGuestListClick(event) {
-        const actionBtn = event.target.closest('button[data-action]');
-        if (!actionBtn) return;
+    // items[3] = Location (lasciamo il testo statico dell'HTML)
 
-        const action = actionBtn.dataset.action;
-        const card = actionBtn.closest('.ep-guest-card');
-        if (!card) return;
-
-        const guestId = Number(card.dataset.guestId);
-        if (!Number.isFinite(guestId)) return;
-
-        if (action === 'toggle-rsvp') {
-            toggleGuestRsvp(guestId, card);
-        } else if (action === 'delete-guest') {
-            deleteGuest(guestId, card);
-        }
-    }
-
-    /**
-     * Gestisce input sullo slider budget (solo UI)
-     */
-    function handleBudgetInput(event) {
-        const value = event.target.value;
-        const output = document.querySelector('#event-budget-output');
-        if (!output) return;
-
-        output.textContent = formatBudget(value);
-    }
-
-    /**
-     * Gestisce cambio categoria evento (aggiorna pill attive)
-     */
-    function handleCategoryChange(event) {
-        const group = document.querySelector('#event-category-group');
-        if (!group) return;
-
-        const labels = group.querySelectorAll('.ep-segmented-control__item');
-        labels.forEach((label) =>
-            label.classList.remove('ep-segmented-control__item--active')
-        );
-
-        const input = event.target;
-        if (!(input instanceof HTMLInputElement)) return;
-
-        const label = group.querySelector(`label[for="${input.id}"]`);
-        if (label) {
-            label.classList.add('ep-segmented-control__item--active');
-        }
-    }
-
-    /**
-     * Aggiunge una card invitato nel DOM a partire da un oggetto guest
-     */
-    function appendGuestCard(guest) {
-        const guestList = document.querySelector('#guest-list');
-        if (!guestList) return;
-
-        const card = document.createElement('article');
-        card.className = `ep-guest-card ${getGuestStatusClass(guest.rsvp)}`;
-        card.dataset.guestId = String(guest.id);
-        card.dataset.rsvpStatus = guest.rsvp;
-
-        card.innerHTML = `
-      <div class="ep-guest-card__header">
-        <span class="ep-guest-card__name"></span>
-        <span class="ep-guest-card__status-badge"></span>
-      </div>
-      <div class="ep-guest-card__meta">
-        <span class="ep-guest-card__role">Ruolo da definire</span>
-        <div class="btn-group btn-group-sm">
-          <button
-            type="button"
-            class="btn btn-outline-secondary ep-btn-ghost"
-            data-action="toggle-rsvp"
-          >
-            Cambia RSVP
-          </button>
-          <button
-            type="button"
-            class="btn btn-outline-danger ep-btn-ghost"
-            data-action="delete-guest"
-          >
-            Rimuovi
-          </button>
-        </div>
-      </div>
-    `;
-
-        const nameEl = card.querySelector('.ep-guest-card__name');
-        const badgeEl = card.querySelector('.ep-guest-card__status-badge');
-
-        if (nameEl) nameEl.textContent = guest.name;
-        if (badgeEl) badgeEl.textContent = RSVP_LABELS[guest.rsvp] || '';
-
-        guestList.appendChild(card);
-    }
-
-    /**
-     * Restituisce la classe di stato per la card in base all'RSVP
-     */
-    function getGuestStatusClass(rsvp) {
-        switch (rsvp) {
-            case 'confirmed':
-                return 'ep-guest-card--confirmed';
-            case 'canceled':
-                return 'ep-guest-card--canceled';
-            case 'pending':
-            default:
-                return 'ep-guest-card--pending';
-        }
-    }
-
-    /**
-     * Cicla lo stato RSVP di un invitato e aggiorna DOM + stato
-     */
-    function toggleGuestRsvp(guestId, cardEl) {
-        const guest = state.guests.find((g) => g.id === guestId);
-        if (!guest) return;
-
-        const currentIndex = RSVP_STATES.indexOf(guest.rsvp);
-        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % RSVP_STATES.length;
-        const nextRsvp = RSVP_STATES[nextIndex];
-
-        guest.rsvp = nextRsvp;
-
-        // Aggiorna DOM card
-        cardEl.dataset.rsvpStatus = nextRsvp;
-        cardEl.classList.remove(
-            'ep-guest-card--confirmed',
-            'ep-guest-card--canceled',
-            'ep-guest-card--pending'
-        );
-        cardEl.classList.add(getGuestStatusClass(nextRsvp));
-
-        const badgeEl = cardEl.querySelector('.ep-guest-card__status-badge');
-        if (badgeEl) {
-            badgeEl.textContent = RSVP_LABELS[nextRsvp] || '';
+    // Servizi extra
+    if (items[4]) {
+        if (eventExtras.length > 0) {
+            i = 0;
+            while (i < eventExtras.length) {
+                if (i > 0) {
+                    extrasText += ", ";
+                }
+                extrasText += getExtraLabel(eventExtras[i]);
+                i++;
+            }
+        } else {
+            extrasText = "Nessun servizio extra";
         }
 
-        renderConfirmedGuests();
-        renderRsvpSummary();
+        items[4].innerHTML =
+            "<strong>Servizi extra:</strong> " + escapeHtml(extrasText);
     }
 
-    /**
-     * Elimina un invitato dallo stato e dal DOM
-     */
-    function deleteGuest(guestId, cardEl) {
-        const index = state.guests.findIndex((g) => g.id === guestId);
-        if (index === -1) return;
-
-        state.guests.splice(index, 1);
-        cardEl.remove();
-
-        renderConfirmedGuests();
-        renderRsvpSummary();
+    // Budget
+    if (items[5]) {
+        items[5].innerHTML =
+            "<strong>Budget indicativo:</strong> " + escapeHtml(formatBudget(eventBudget));
     }
 
-    /**
-     * Aggiorna il riepilogo evento (bullet list) in base allo stato.event
-     * Si appoggia alla struttura già presente in .ep-invite-summary__list
-     */
-    function renderEventSummary() {
-        const list = document.querySelector('.ep-invite-summary__list');
-        if (!list) return;
+    // Capienza
+    if (items[6]) {
+        items[6].innerHTML =
+            "<strong>Capienza massima:</strong> " +
+            String(eventMaxParticipants) +
+            " partecipanti";
+    }
+}
 
-        const items = list.querySelectorAll('li');
-        const { name, date, time, category, budget, maxParticipants, extras } = state.event;
+function renderConfirmedGuests() {
+    let container = document.querySelector("#confirmed-guests");
+    let list;
+    let i;
+    let html = "";
 
-        const categoryLabel = getCategoryLabel(category);
-        const extrasLabel = extras.length
-            ? extras
-                .map((e) => {
-                    switch (e) {
-                        case 'catering':
-                            return 'Catering';
-                        case 'photographer':
-                            return 'Fotografo';
-                        case 'music':
-                            return 'Musica';
-                        case 'decorations':
-                            return 'Decorazioni';
-                        default:
-                            return e;
-                    }
-                })
-                .join(', ')
-            : 'Nessun servizio extra';
-
-        if (items[0]) {
-            items[0].innerHTML = `<strong>Nome:</strong> ${name || 'Quarterly Business Review Q3 · Client XYZ'
-                }`;
-        }
-        if (items[1]) {
-            const dateLabel = date || 'Data da definire';
-            const timeLabel = time || '--:--';
-            items[1].innerHTML = `<strong>Data:</strong> ${dateLabel} · <strong>Ora:</strong> ${timeLabel}`;
-        }
-        if (items[2]) {
-            items[2].innerHTML = `<strong>Categoria:</strong> ${categoryLabel}`;
-        }
-        // items[3] = Location (lasciamo il mock di esempio già presente)
-        if (items[4]) {
-            items[4].innerHTML = `<strong>Servizi extra:</strong> ${extrasLabel}`;
-        }
-        if (items[5]) {
-            items[5].innerHTML = `<strong>Budget indicativo:</strong> ${formatBudget(
-                budget
-            )}`;
-        }
-        if (items[6]) {
-            items[6].innerHTML = `<strong>Capienza massima:</strong> ${maxParticipants || 0
-                } partecipanti`;
-        }
+    if (!container) {
+        return;
     }
 
-    function getCategoryLabel(category) {
-        switch (category) {
-            case 'client_meeting':
-                return 'Client Meeting';
-            case 'training':
-                return 'Training';
-            case 'internal_offsite':
-                return 'Internal Offsite';
-            default:
-                return category;
+    list = container.querySelector("ul");
+    if (!list) {
+        return;
+    }
+
+    i = 0;
+    while (i < guestIds.length) {
+        if (guestRsvps[i] === "confirmed") {
+            html += "<li>" + escapeHtml(guestNames[i]) + "</li>";
         }
+        i++;
     }
 
-    /**
-     * Aggiorna la lista degli invitati confermati all'interno del riepilogo
-     */
-    function renderConfirmedGuests() {
-        const container = document.querySelector('#confirmed-guests');
-        if (!container) return;
+    if (html === "") {
+        html = "<li>Nessun invitato confermato al momento</li>";
+    }
 
-        const list = container.querySelector('ul');
-        if (!list) return;
+    list.innerHTML = html;
+}
 
-        const confirmed = state.guests.filter((g) => g.rsvp === 'confirmed');
+function renderRsvpSummary() {
+    let table = document.querySelector("#rsvp-summary");
+    let confirmedCell;
+    let canceledCell;
+    let pendingCell;
+    let i;
+    let confirmedCount = 0;
+    let canceledCount = 0;
+    let pendingCount = 0;
 
-        if (!confirmed.length) {
-            list.innerHTML = `<li>Nessun invitato confermato al momento</li>`;
-            return;
+    if (!table) {
+        return;
+    }
+
+    i = 0;
+    while (i < guestIds.length) {
+        if (guestRsvps[i] === "confirmed") {
+            confirmedCount++;
+        } else if (guestRsvps[i] === "canceled") {
+            canceledCount++;
+        } else if (guestRsvps[i] === "pending") {
+            pendingCount++;
         }
-
-        list.innerHTML = confirmed
-            .map((g) => `<li>${escapeHtml(g.name)}</li>`)
-            .join('');
+        i++;
     }
 
-    /**
-     * Aggiorna la tabella riepilogo RSVP (conteggi per stato)
-     */
-    function renderRsvpSummary() {
-        const table = document.querySelector('#rsvp-summary');
-        if (!table) return;
+    confirmedCell = table.querySelector('td[data-rsvp-count="confirmed"]');
+    canceledCell = table.querySelector('td[data-rsvp-count="canceled"]');
+    pendingCell = table.querySelector('td[data-rsvp-count="pending"]');
 
-        const confirmedCount = state.guests.filter((g) => g.rsvp === 'confirmed').length;
-        const canceledCount = state.guests.filter((g) => g.rsvp === 'canceled').length;
-        const pendingCount = state.guests.filter((g) => g.rsvp === 'pending').length;
-
-        const confirmedCell = table.querySelector('td[data-rsvp-count="confirmed"]');
-        const canceledCell = table.querySelector('td[data-rsvp-count="canceled"]');
-        const pendingCell = table.querySelector('td[data-rsvp-count="pending"]');
-
-        if (confirmedCell) confirmedCell.textContent = String(confirmedCount);
-        if (canceledCell) canceledCell.textContent = String(canceledCount);
-        if (pendingCell) pendingCell.textContent = String(pendingCount);
+    if (confirmedCell) {
+        confirmedCell.textContent = String(confirmedCount);
     }
-
-    /**
-     * Escape semplice per evitare injection nel render di nomi invitati
-     */
-    function escapeHtml(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+    if (canceledCell) {
+        canceledCell.textContent = String(canceledCount);
     }
-
-    /**
-     * Bootstrap dell'app SPA-like
-     */
-    function init() {
-        hydrateStateFromDOM();
-        bindEventListeners();
-        // Aggiorna visual budget iniziale
-        const budgetInput = document.querySelector('#event-budget');
-        if (budgetInput) {
-            handleBudgetInput({ target: budgetInput });
-        }
+    if (pendingCell) {
+        pendingCell.textContent = String(pendingCount);
     }
+}
 
-    document.addEventListener('DOMContentLoaded', init);
-})();
+/* ============================
+   ESCAPE HTML
+   ============================ */
+
+function escapeHtml(text) {
+    let result = String(text);
+    result = result.replace(/&/g, "&amp;");
+    result = result.replace(/</g, "&lt;");
+    result = result.replace(/>/g, "&gt;");
+    result = result.replace(/"/g, "&quot;");
+    result = result.replace(/'/g, "&#039;");
+    return result;
+}
+
+/* ============================
+   AVVIO APP
+   ============================ */
+
+function init() {
+    initIntl();
+    hydrateStateFromDOM();
+    bindEventListeners();
+}
+
+document.addEventListener("DOMContentLoaded", init);

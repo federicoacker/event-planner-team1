@@ -11,6 +11,8 @@
 
     <!-- Stili custom -->
     <link rel="stylesheet" href="styles/style.css" />
+    <!-- Ricorda di includere anche scripts/script.js nella pagina reale -->
+
 </head>
 
 <body>
@@ -35,7 +37,7 @@
                         <div class="text-md-end">
                             <p class="ep-header__meta-title mb-1">Engagement · QBR Q3</p>
                             <p class="ep-header__meta-sub mb-0">
-                                Mock UI · logica da implementare in <code>scripts/script.js</code>
+                                Console eventi interna
                             </p>
                         </div>
                     </div>
@@ -84,8 +86,7 @@
                                             name="eventName" placeholder="Quarterly Business Review Q3 · Client XYZ"
                                             required />
                                         <div class="ep-hint mt-1">
-                                            Includi periodo e cliente (es. “QBR Q3 · Client XYZ”) per semplificare il
-                                            tracciamento.
+                                            Includi periodo e cliente per semplificare il tracciamento.
                                         </div>
                                     </div>
 
@@ -135,9 +136,6 @@
                                                 Internal Offsite
                                             </label>
                                         </div>
-                                        <p class="ep-hint mt-1 mb-0">
-                                            Il JS potrà usare questo gruppo per filtrare viste o KPI per categoria.
-                                        </p>
                                     </div>
 
                                     <!-- Budget slider -->
@@ -149,7 +147,7 @@
                                             name="eventBudget" min="1000" max="20000" step="500" value="7500" />
                                         <div class="d-flex justify-content-between align-items-center mt-1">
                                             <span class="ep-hint">
-                                                Il valore sarà letto via JS per aggiornare il riepilogo.
+                                                Definisci il livello di investimento previsto per l’evento.
                                             </span>
                                             <span id="event-budget-output" class="ep-budget-output text-nowrap">
                                                 7.500 EUR
@@ -255,9 +253,6 @@
                                         </button>
                                     </div>
                                 </div>
-                                <p class="ep-hint mt-2 mb-0">
-                                    In produzione, l’invio aggiornerà la lista a destra e il riepilogo RSVP.
-                                </p>
                             </form>
                         </div>
                     </section>
@@ -276,7 +271,6 @@
                                     Vista operativa per aggiornare rapidamente lo stato RSVP.
                                 </p>
                             </div>
-                            <span class="ep-tag ep-tag--muted">Mock statico</span>
                         </div>
                         <div class="ep-card__body" id="guest-list" data-role="guest-list">
                             <!-- Invitato confermato -->
@@ -363,7 +357,7 @@
                         </div>
                         <div class="ep-card__body">
                             <p class="ep-section-title">
-                                Dettagli evento (mock compilato)
+                                Dettagli evento
                             </p>
                             <ul class="ep-invite-summary__list">
                                 <li>
@@ -438,8 +432,8 @@
     </div>
 
     <!-- script -->
-    <script src="./scripts/style.js"></script>
-    <!-- Unico JS consentito: Bootstrap bundle -->
+    <script src="scripts/style.js" defer></script>
+    <!-- Unico JS esterno: Bootstrap bundle -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.8/js/bootstrap.bundle.min.js"></script>
 </body>
 
