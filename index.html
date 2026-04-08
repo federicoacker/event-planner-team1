@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Event Planner - Console</title>
+
+    <!-- Bootstrap 5.3.8 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.8/css/bootstrap.min.css" />
+
+    <!-- Stili custom -->
+    <link rel="stylesheet" href="styles/style.css" />
+</head>
+
+<body>
+    <div class="ep-app-wrapper">
+        <div class="container ep-shell">
+            <!-- HEADER -->
+            <header class="ep-header mb-4">
+                <div class="ep-header__surface">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <div class="d-inline-flex align-items-center gap-2 mb-2">
+                                <span class="badge rounded-pill ep-header__pill">
+                                    Event Operating Console
+                                </span>
+                                <span class="ep-header__env text-uppercase">Client XYZ</span>
+                            </div>
+                            <h1 class="ep-header__title h3 mb-1">Event Planner</h1>
+                            <p class="ep-header__subtitle mb-0">
+                                Progetta eventi executive, gestisci gli inviti e mantieni allineato il board.
+                            </p>
+                        </div>
+                        <div class="text-md-end">
+                            <p class="ep-header__meta-title mb-1">Engagement · QBR Q3</p>
+                            <p class="ep-header__meta-sub mb-0">
+                                Mock UI · logica da implementare in <code>scripts/script.js</code>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="ep-header__tabs d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn btn-sm ep-chip ep-chip--primary" disabled>
+                            Evento
+                        </button>
+                        <button type="button" class="btn btn-sm ep-chip ep-chip--ghost" disabled>
+                            Invitati
+                        </button>
+                        <button type="button" class="btn btn-sm ep-chip ep-chip--ghost" disabled>
+                            Riepilogo
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="row g-4 ep-layout">
+                <!-- COLONNA SINISTRA: EVENTO + FORM INVITATO -->
+                <section class="col-12 col-xl-7 d-flex flex-column gap-3">
+                    <!-- FORM EVENTO -->
+                    <section aria-labelledby="event-form-title" class="ep-card ep-card--main">
+                        <div class="ep-card__header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 id="event-form-title" class="ep-card__title">
+                                    Configurazione evento
+                                </h2>
+                                <p class="ep-card__subtitle mb-0">
+                                    Definisci il perimetro prima di condividere l’invito con i partecipanti.
+                                </p>
+                            </div>
+                            <span class="ep-tag ep-tag--neutral d-none d-sm-inline-flex">
+                                Step 1 / 3
+                            </span>
+                        </div>
+                        <div class="ep-card__body">
+                            <form id="event-form" class="ep-form" novalidate>
+                                <div class="row g-3">
+                                    <!-- Nome evento -->
+                                    <div class="col-12 ep-form-group">
+                                        <label for="event-name" class="form-label ep-form-label">
+                                            Nome evento
+                                        </label>
+                                        <input type="text" class="form-control ep-input" id="event-name"
+                                            name="eventName" placeholder="Quarterly Business Review Q3 · Client XYZ"
+                                            required />
+                                        <div class="ep-hint mt-1">
+                                            Includi periodo e cliente (es. “QBR Q3 · Client XYZ”) per semplificare il
+                                            tracciamento.
+                                        </div>
+                                    </div>
+
+                                    <!-- Data / Ora / Max partecipanti -->
+                                    <div class="col-12 col-md-4 ep-form-group">
+                                        <label for="event-date" class="form-label ep-form-label">
+                                            Data
+                                        </label>
+                                        <input type="date" class="form-control ep-input" id="event-date"
+                                            name="eventDate" required />
+                                    </div>
+                                    <div class="col-6 col-md-3 ep-form-group">
+                                        <label for="event-time" class="form-label ep-form-label">
+                                            Ora
+                                        </label>
+                                        <input type="time" class="form-control ep-input" id="event-time"
+                                            name="eventTime" required />
+                                    </div>
+                                    <div class="col-6 col-md-5 ep-form-group">
+                                        <label for="event-max-participants" class="form-label ep-form-label">
+                                            Numero massimo partecipanti
+                                        </label>
+                                        <input type="number" class="form-control ep-input" id="event-max-participants"
+                                            name="maxParticipants" min="1" max="500" value="40" required />
+                                    </div>
+
+                                    <!-- Categoria evento -->
+                                    <div class="col-12 col-lg-6 ep-form-group">
+                                        <p class="ep-form-label mb-1">Categoria evento</p>
+                                        <div class="ep-segmented-control" id="event-category-group">
+                                            <input type="radio" class="ep-radio-input" name="eventCategory"
+                                                id="event-category-client" value="client_meeting" checked />
+                                            <label for="event-category-client"
+                                                class="ep-segmented-control__item ep-segmented-control__item--active">
+                                                Client Meeting
+                                            </label>
+
+                                            <input type="radio" class="ep-radio-input" name="eventCategory"
+                                                id="event-category-training" value="training" />
+                                            <label for="event-category-training" class="ep-segmented-control__item">
+                                                Training
+                                            </label>
+
+                                            <input type="radio" class="ep-radio-input" name="eventCategory"
+                                                id="event-category-internal" value="internal_offsite" />
+                                            <label for="event-category-internal" class="ep-segmented-control__item">
+                                                Internal Offsite
+                                            </label>
+                                        </div>
+                                        <p class="ep-hint mt-1 mb-0">
+                                            Il JS potrà usare questo gruppo per filtrare viste o KPI per categoria.
+                                        </p>
+                                    </div>
+
+                                    <!-- Budget slider -->
+                                    <div class="col-12 col-lg-6 ep-form-group">
+                                        <label for="event-budget" class="form-label ep-form-label">
+                                            Budget indicativo
+                                        </label>
+                                        <input type="range" class="form-range ep-range" id="event-budget"
+                                            name="eventBudget" min="1000" max="20000" step="500" value="7500" />
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <span class="ep-hint">
+                                                Il valore sarà letto via JS per aggiornare il riepilogo.
+                                            </span>
+                                            <span id="event-budget-output" class="ep-budget-output text-nowrap">
+                                                7.500 EUR
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Servizi extra -->
+                                    <div class="col-12 ep-form-group">
+                                        <p class="ep-form-label mb-2">Servizi extra</p>
+                                        <div class="row g-2 ep-extra-list">
+                                            <div class="col-6 col-sm-3">
+                                                <div class="form-check ep-extra-item">
+                                                    <input class="form-check-input" type="checkbox" id="extra-catering"
+                                                        name="extraServices" value="catering" checked />
+                                                    <label class="form-check-label" for="extra-catering">
+                                                        Catering
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-3">
+                                                <div class="form-check ep-extra-item">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="extra-photographer" name="extraServices"
+                                                        value="photographer" />
+                                                    <label class="form-check-label" for="extra-photographer">
+                                                        Fotografo
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-3">
+                                                <div class="form-check ep-extra-item">
+                                                    <input class="form-check-input" type="checkbox" id="extra-music"
+                                                        name="extraServices" value="music" checked />
+                                                    <label class="form-check-label" for="extra-music">
+                                                        Musica
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-3">
+                                                <div class="form-check ep-extra-item">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="extra-decorations" name="extraServices"
+                                                        value="decorations" />
+                                                    <label class="form-check-label" for="extra-decorations">
+                                                        Decorazioni
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Submit evento -->
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="submit" class="btn ep-btn-primary" data-action="submit-event">
+                                        Registra evento
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+
+                    <!-- FORM INVITATO -->
+                    <section aria-labelledby="guest-form-title" class="ep-card ep-card--secondary">
+                        <div class="ep-card__header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 id="guest-form-title" class="ep-card__title">
+                                    Aggiungi invitato
+                                </h2>
+                                <p class="ep-card__subtitle mb-0">
+                                    Registra le persone chiave e tieni traccia dello stato RSVP.
+                                </p>
+                            </div>
+                            <span class="ep-tag ep-tag--neutral d-none d-sm-inline-flex">
+                                Step 2 / 3
+                            </span>
+                        </div>
+                        <div class="ep-card__body">
+                            <form id="guest-form" class="ep-form" novalidate>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-12 col-md-6 ep-form-group">
+                                        <label for="guest-name" class="form-label ep-form-label">
+                                            Nome invitato
+                                        </label>
+                                        <input type="text" class="form-control ep-input" id="guest-name"
+                                            name="guestName" placeholder="Es. Maria Rossi" required />
+                                    </div>
+                                    <div class="col-12 col-md-4 ep-form-group">
+                                        <label for="guest-rsvp" class="form-label ep-form-label">
+                                            RSVP
+                                        </label>
+                                        <select id="guest-rsvp" name="guestRsvpStatus" class="form-select ep-input"
+                                            required>
+                                            <option value="confirmed" selected>Confermato</option>
+                                            <option value="canceled">Annullato</option>
+                                            <option value="pending">In attesa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-2 d-grid ep-form-group">
+                                        <button type="submit" class="btn ep-btn-primary" data-action="add-guest">
+                                            Aggiungi
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="ep-hint mt-2 mb-0">
+                                    In produzione, l’invio aggiornerà la lista a destra e il riepilogo RSVP.
+                                </p>
+                            </form>
+                        </div>
+                    </section>
+                </section>
+
+                <!-- COLONNA DESTRA: INVITATI + RIEPILOGO -->
+                <aside class="col-12 col-xl-5 d-flex flex-column gap-3 ep-aside">
+                    <!-- LISTA INVITATI -->
+                    <section aria-labelledby="guest-list-title" class="ep-card ep-card--main">
+                        <div class="ep-card__header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 id="guest-list-title" class="ep-card__title mb-0">
+                                    Lista invitati
+                                </h2>
+                                <p class="ep-card__subtitle mb-0">
+                                    Vista operativa per aggiornare rapidamente lo stato RSVP.
+                                </p>
+                            </div>
+                            <span class="ep-tag ep-tag--muted">Mock statico</span>
+                        </div>
+                        <div class="ep-card__body" id="guest-list" data-role="guest-list">
+                            <!-- Invitato confermato -->
+                            <article class="ep-guest-card ep-guest-card--confirmed" data-guest-id="1"
+                                data-rsvp-status="confirmed">
+                                <div class="ep-guest-card__header">
+                                    <span class="ep-guest-card__name">Maria Rossi</span>
+                                    <span class="ep-guest-card__status-badge">Confermato</span>
+                                </div>
+                                <div class="ep-guest-card__meta">
+                                    <span class="ep-guest-card__role">Partner · Finance</span>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary ep-btn-ghost"
+                                            data-action="toggle-rsvp">
+                                            Cambia RSVP
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger ep-btn-ghost"
+                                            data-action="delete-guest">
+                                            Rimuovi
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+
+                            <!-- Invitato annullato -->
+                            <article class="ep-guest-card ep-guest-card--canceled" data-guest-id="2"
+                                data-rsvp-status="canceled">
+                                <div class="ep-guest-card__header">
+                                    <span class="ep-guest-card__name">Luca Bianchi</span>
+                                    <span class="ep-guest-card__status-badge">Annullato</span>
+                                </div>
+                                <div class="ep-guest-card__meta">
+                                    <span class="ep-guest-card__role">Manager · Consulting</span>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary ep-btn-ghost"
+                                            data-action="toggle-rsvp">
+                                            Cambia RSVP
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger ep-btn-ghost"
+                                            data-action="delete-guest">
+                                            Rimuovi
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+
+                            <!-- Invitato in attesa -->
+                            <article class="ep-guest-card ep-guest-card--pending" data-guest-id="3"
+                                data-rsvp-status="pending">
+                                <div class="ep-guest-card__header">
+                                    <span class="ep-guest-card__name">Giulia Verdi</span>
+                                    <span class="ep-guest-card__status-badge">In attesa</span>
+                                </div>
+                                <div class="ep-guest-card__meta">
+                                    <span class="ep-guest-card__role">Senior Associate · Tax</span>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary ep-btn-ghost"
+                                            data-action="toggle-rsvp">
+                                            Cambia RSVP
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger ep-btn-ghost"
+                                            data-action="delete-guest">
+                                            Rimuovi
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </section>
+
+                    <!-- RIEPILOGO EVENTO -->
+                    <section aria-labelledby="event-summary-title" class="ep-card ep-card--summary"
+                        id="event-summary-card">
+                        <div class="ep-card__header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 id="event-summary-title" class="ep-card__title mb-0">
+                                    Riepilogo evento
+                                </h2>
+                                <p class="ep-card__subtitle mb-0">
+                                    Preview dell’invito che verrà condiviso con i partecipanti.
+                                </p>
+                            </div>
+                            <span class="ep-tag ep-tag--accent">Step 3 / 3</span>
+                        </div>
+                        <div class="ep-card__body">
+                            <p class="ep-section-title">
+                                Dettagli evento (mock compilato)
+                            </p>
+                            <ul class="ep-invite-summary__list">
+                                <li>
+                                    <strong>Nome:</strong>
+                                    Quarterly Business Review Q3 · Client XYZ
+                                </li>
+                                <li>
+                                    <strong>Data:</strong> 15 ottobre 2026 ·
+                                    <strong>Ora:</strong> 09:30
+                                </li>
+                                <li>
+                                    <strong>Categoria:</strong> Client Meeting
+                                </li>
+                                <li>
+                                    <strong>Location:</strong> Milano · HQ Boardroom 12F
+                                </li>
+                                <li>
+                                    <strong>Servizi extra:</strong>
+                                    Catering premium, Musica ambient, Decorazioni minimal
+                                </li>
+                                <li>
+                                    <strong>Budget indicativo:</strong> 7.500 EUR
+                                </li>
+                                <li>
+                                    <strong>Capienza massima:</strong> 40 partecipanti
+                                </li>
+                            </ul>
+
+                            <!-- Lista confermati -->
+                            <div class="mt-3">
+                                <div class="ep-confirmed-list" id="confirmed-guests" data-role="confirmed-guests">
+                                    <div class="ep-confirmed-list__title">
+                                        Invitati confermati
+                                    </div>
+                                    <ul class="mb-0 ps-3">
+                                        <li>Maria Rossi</li>
+                                        <li>Team Finance Client XYZ (4 pax)</li>
+                                        <li>Giulia Verdi</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Tabella riepilogo RSVP -->
+                            <div class="mt-3">
+                                <p class="ep-section-title mb-2">Riepilogo RSVP</p>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0 ep-rsvp-table" id="rsvp-summary"
+                                        data-role="rsvp-summary">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Confermato</th>
+                                                <th scope="col">Annullato</th>
+                                                <th scope="col">In attesa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td data-rsvp-count="confirmed">6</td>
+                                                <td data-rsvp-count="canceled">1</td>
+                                                <td data-rsvp-count="pending">2</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
+                </aside>
+            </main>
+        </div>
+    </div>
+
+    <!-- script -->
+    <script src="./scripts/style.js"></script>
+    <!-- Unico JS consentito: Bootstrap bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.8/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
